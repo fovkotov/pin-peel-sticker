@@ -247,23 +247,62 @@ body.is-open .app {
 }
 
 .sticker-stage {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 2;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: 5;
+  pointer-events: none;
   touch-action: none;
+}
+
+body:not(.is-open) .sticker-stage {
+  display: none;
+}
+
+.sticker-stage:not(.is-ready) {
+  visibility: hidden;
 }
 
 #sticker-target {
   width: 100%;
   height: 100%;
+  pointer-events: none;
 }
 
 #sticker-target canvas {
   outline: none;
   box-shadow: none;
   touch-action: none;
+  pointer-events: none;
+}
+
+.sticker-hit {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  z-index: 2;
+  user-select: none;
+}
+
+.sticker-hit:focus {
+  outline: none;
+}
+
+.sticker-stage.is-peeling .sticker-hit {
+  cursor: grabbing;
+}
+
+.sticker-stage.is-detached .sticker-hit {
+  pointer-events: none;
+}
+
+.sticker-stage.is-detached #sticker-target {
+  visibility: hidden;
 }
 
 .history {
@@ -355,7 +394,7 @@ body.is-open .app {
 }
 
 .sheet {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 12;
   transform: translateY(100%);
