@@ -123,7 +123,38 @@
           <span>Подробнее</span>
         </p>
       </footer>
+
+      <div class="sheet" id="index-sheet" aria-hidden="true">
+        <img
+          src="./assets/index-sheet.png"
+          alt="Яндекс Пин — ранний доступ"
+        />
+      </div>
     </div>
+
+    <aside class="server" aria-label="Сервер">
+      <h1 class="server__title">Сервер</h1>
+
+      <section class="server__block">
+        <p class="server__label">GitHub Pages</p>
+        <a
+          class="server__link"
+          href="https://fovkotov.github.io/pin-peel-sticker/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >https://fovkotov.github.io/pin-peel-sticker/</a>
+        <p class="server__hint">Нажмите ссылку — откроется живая страница. На телефоне тот же адрес.</p>
+      </section>
+
+      <section class="server__block">
+        <p class="server__label">Локально</p>
+        <code class="server__code">python3 -m http.server 5174</code>
+        <p class="server__hint">
+          Затем откройте
+          <a href="http://127.0.0.1:5174/">http://127.0.0.1:5174/</a>
+        </p>
+      </section>
+    </aside>
 
     <script type="module" src="./gate.js"></script>
   </body>

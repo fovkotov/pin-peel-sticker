@@ -105,6 +105,8 @@ button {
 
 .app {
   display: none;
+  position: relative;
+  overflow: hidden;
   height: 100dvh;
   height: 100svh;
   flex-direction: column;
@@ -260,6 +262,7 @@ body.is-open .app {
 
 #sticker-target canvas {
   outline: none;
+  box-shadow: none;
   touch-action: none;
 }
 
@@ -349,4 +352,113 @@ body.is-open .app {
   line-height: 16px;
   letter-spacing: 0.09px;
   color: var(--muted);
+}
+
+.sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  transform: translateY(100%);
+  transition: transform 400ms ease;
+  pointer-events: none;
+  background: #6b4dff;
+}
+
+.sheet.is-open {
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.sheet img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.server {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  body.is-open {
+    display: grid;
+    grid-template-columns: 390px minmax(0, 1fr);
+    background: #f3f2f5;
+  }
+
+  body.is-open .app {
+    min-width: 0;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  body.is-open .server {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    min-width: 0;
+    height: 100dvh;
+    height: 100svh;
+    overflow: auto;
+    padding: 36px 40px;
+    color: var(--text);
+  }
+
+  .server__title {
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 24px;
+    letter-spacing: 0.16px;
+  }
+
+  .server__block {
+    display: grid;
+    gap: 8px;
+    max-width: 420px;
+  }
+
+  .server__label {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    letter-spacing: 0.12px;
+    color: var(--muted);
+  }
+
+  .server__link,
+  .server__hint a {
+    color: var(--pin);
+    font-size: 15px;
+    line-height: 22px;
+    letter-spacing: 0.12px;
+    word-break: break-all;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .server__hint {
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.12px;
+    color: rgba(0, 0, 0, 0.56);
+  }
+
+  .server__hint a {
+    font-size: inherit;
+    word-break: break-all;
+  }
+
+  .server__code {
+    display: block;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--text);
+    word-break: break-all;
+  }
 }

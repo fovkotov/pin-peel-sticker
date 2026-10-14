@@ -3,11 +3,18 @@ import { createSticker } from "./vendor/sticker-forge.es.js";
 const STICKER_H = 54;
 const PAD = 64;
 const PIN = "#A68AFF";
+const CIRCLE_CX = 27;
+const CIRCLE_CY = 27;
+const CIRCLE_R = 21;
+const MARK = 18;
+const LABEL_GAP = 7;
+const LABEL = "Яндекс Пин";
 
 const target = document.querySelector("#sticker-target");
 const reveal = document.querySelector("#sticker-reveal");
 const stage = document.querySelector("#sticker-stage");
 const slot = document.querySelector("#sticker-slot");
+const sheet = document.querySelector("#index-sheet");
 
 let stickerW = 351;
 let stageW = stickerW + PAD * 2;
@@ -36,16 +43,20 @@ function loadImage(src) {
   });
 }
 
-async function makeStickerDataUrl() {
+async function waitForFonts() {
   await Promise.all([
     document.fonts.load('16px "YS Geo"'),
     document.fonts.load('400 16px "YS Geo"'),
   ]).catch(() => {});
   await document.fonts.ready;
+}
 
-  const [arrow, logo] = await Promise.all([
+async function makeStickerDataUrl() {
+  await waitForFonts();
+
+  const [arrow, mark] = await Promise.all([
     loadImage("./assets/arrow-right.svg"),
-    loadImage("./assets/pin-logo.svg"),
+    loadImage("./assets/pin-mark.svg"),
   ]);
 
   const scale = 4;
@@ -62,23 +73,19 @@ async function makeStickerDataUrl() {
 
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
-  ctx.arc(27, 27, 21, 0, Math.PI * 2);
+  ctx.arc(CIRCLE_CX, CIRCLE_CY, CIRCLE_R, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.drawImage(arrow, 17.3, 17.5, 19.5, 19);
 
-  const logoW = 17.72;
-  const logoH = 16.8;
-  const gap = 7;
   ctx.font = '400 16px "YS Geo", sans-serif';
   ctx.fillStyle = "rgba(255,255,255,0.9)";
   ctx.textBaseline = "middle";
-  const label = "Яндекс Пин";
-  const textW = ctx.measureText(label).width;
-  const groupW = logoW + gap + textW;
+  const textW = ctx.measureText(LABEL).width;
+  const groupW = MARK + LABEL_GAP + textW;
   const groupX = (stickerW - groupW) / 2;
-  ctx.drawImage(logo, groupX, (STICKER_H - logoH) / 2, logoW, logoH);
-  ctx.fillText(label, groupX + logoW + gap, STICKER_H / 2 + 0.5);
+  ctx.drawImage(mark, groupX, (STICKER_H - MARK) / 2, MARK, MARK);
+  ctx.fillText(LABEL, groupX + MARK + LABEL_GAP, STICKER_H / 2 + 0.5);
 
   return canvas.toDataURL("image/png");
 }
@@ -123,31 +130,60 @@ async function playTease() {
   await animatePeel(0.2, 0, 500, motion);
 }
 
-function lockPeelLeftToRight(engine) {
-  const originalHitEdge = engine.hitEdge.bind(engine);
-  const stickerLeft = PAD / stageW;
-  const grabLimit = (PAD + 96) / stageW;
-  const directionCopy = Object.getPrototypeOf(engine.activeDirection).copy;
+function disableHintOverlays(engine) {
+  engine.startInteractionHint = () => {
+    engine.interactionHintActive = false;
+    engine.interactionHintElapsed = 0;
+    if (engine.uniforms?.uInteractionHint) {
+      engine.uniforms.uInteractionHint.value = 0;
+    }
+  };
+  engine.interactionHintActive = false;
+  engine.interactionHintElapsed = 0;
+  if (engine.uniforms?.uInteractionHint) {
+    engine.uniforms.uInteractionHint.value = 0;
+  }
+  engine.setBackgroundRemovalEffect?.(false);
+}
+
+function enableFreePeelFromCircle(engine) {
+  const hitR = CIRCLE_R + 1;
+  const u0 = (PAD + CIRCLE_CX) / stageW;
+  const cssV0 = (PAD + CIRCLE_CY) / stageH;
+  const ru = hitR / stageW;
+  const rv = hitR / stageH;
 
   engine.hitEdge = (local) => {
-    const hit = originalHitEdge(local);
-    if (!hit) return null;
-    const u = hit.local.x / engine.meshWidth + 0.5;
-    if (u < stickerLeft - 0.04 || u > grabLimit || hit.inward.x < 0.45) return null;
-    hit.inward.set(1, 0);
-    return hit;
-  };
+    const u = local.x / engine.meshWidth + 0.5;
+    const v = local.y / engine.meshHeight + 0.5;
+    const du = (u - u0) / ru;
+    const dv = (1 - v - cssV0) / rv;
+    if (du * du + dv * dv > 1) return null;
 
-  engine.activeDirection.copy = function copyHorizontal(vector) {
-    directionCopy.call(this, vector);
-    this.set(1, 0);
-    return this;
+    const grab = local.clone();
+    const inward = engine.grabDirection.clone();
+    const mx = local.x - (u0 - 0.5) * engine.meshWidth;
+    const my = local.y - (0.5 - cssV0) * engine.meshHeight;
+    if (mx * mx + my * my < 1e-8) inward.set(1, 0);
+    else inward.set(mx, my).normalize();
+    return { local: grab, inward };
   };
+}
+
+function openSheet() {
+  sheet?.classList.add("is-open");
+  sheet?.setAttribute("aria-hidden", "false");
+}
+
+function hideSheet() {
+  sheet?.classList.remove("is-open");
+  sheet?.setAttribute("aria-hidden", "true");
 }
 
 function resetSticker() {
   if (!sticker) return;
   cancelTease();
+  hideSheet();
   reveal.classList.remove("is-done");
   reveal.style.opacity = "1";
   stage.style.pointerEvents = "auto";
@@ -175,9 +211,9 @@ async function start() {
     edge: { width: 1.6, strength: 0.55 },
     shadow: {
       color: "#3b2a63",
-      opacity: 0.28,
-      blur: 18,
-      distance: 10,
+      opacity: 0,
+      blur: 0,
+      distance: 0,
       angle: 48,
     },
     lighting: {
@@ -192,8 +228,8 @@ async function start() {
       grabWidth: 56,
       maxAngle: 3.35,
       detachThreshold: 0.66,
-      residue: true,
-      surfaceShadow: true,
+      residue: false,
+      surfaceShadow: false,
       release: "snap",
     },
     back: { color: "#c9c9ce", gloss: 0.88, roughness: 0.16 },
@@ -204,7 +240,9 @@ async function start() {
     quality: "high",
   });
 
-  lockPeelLeftToRight(sticker.renderer);
+  enableFreePeelFromCircle(sticker.renderer);
+  disableHintOverlays(sticker.renderer);
+  sticker.setBackgroundRemovalEffect?.(false);
 
   target.addEventListener("pointerdown", cancelTease, { once: true });
 
@@ -224,10 +262,15 @@ async function start() {
   target.addEventListener("detachcomplete", () => {
     reveal.classList.add("is-done");
     stage.style.pointerEvents = "none";
+    openSheet();
   });
 
   reveal.addEventListener("click", () => {
     if (reveal.classList.contains("is-done")) resetSticker();
+  });
+
+  sheet?.addEventListener("click", () => {
+    resetSticker();
   });
 
   playTease();
