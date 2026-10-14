@@ -163,6 +163,78 @@
       ></button>
     </div>
 
+    <aside class="tuner" id="sticker-tuner" hidden aria-hidden="true">
+      <form class="tuner__form" id="tuner-form" autocomplete="off">
+        <header class="tuner__head">
+          <strong>Peel</strong>
+          <span class="tuner__hint">G</span>
+          <button class="tuner__reset" id="tuner-reset" type="button">Сброс</button>
+        </header>
+
+        <label class="tuner__row">
+          <span class="tuner__name">radius</span>
+          <input type="range" name="peel.radius" min="0.02" max="1.2" step="0.01" value="0.15" />
+          <span class="tuner__value">0.15</span>
+        </label>
+        <label class="tuner__row">
+          <span class="tuner__name">stiffness</span>
+          <input type="range" name="peel.stiffness" min="0" max="1" step="0.01" value="0.26" />
+          <span class="tuner__value">0.26</span>
+        </label>
+        <label class="tuner__row">
+          <span class="tuner__name">grabWidth</span>
+          <input type="range" name="peel.grabWidth" min="8" max="120" step="1" value="56" />
+          <span class="tuner__value">56</span>
+        </label>
+        <label class="tuner__row">
+          <span class="tuner__name">maxAngle</span>
+          <input type="range" name="peel.maxAngle" min="2.4" max="6.3" step="0.01" value="3.35" />
+          <span class="tuner__value">3.35</span>
+        </label>
+        <label class="tuner__row">
+          <span class="tuner__name">detachTh</span>
+          <input type="range" name="peel.detachThreshold" min="0.1" max="0.74" step="0.01" value="0.54" />
+          <span class="tuner__value">0.54</span>
+        </label>
+        <label class="tuner__row tuner__row--field">
+          <span class="tuner__name">release</span>
+          <select name="peel.release">
+            <option value="snap" selected>snap</option>
+            <option value="reset">reset</option>
+          </select>
+        </label>
+        <label class="tuner__check">
+          <input type="checkbox" name="peel.residue" />
+          residue
+        </label>
+        <label class="tuner__check">
+          <input type="checkbox" name="peel.surfaceShadow" />
+          surfaceShadow
+        </label>
+
+        <h3 class="tuner__section">Feel</h3>
+        <label class="tuner__row">
+          <span class="tuner__name">tilt</span>
+          <input type="range" name="tilt" min="-15" max="15" step="0.5" value="0" />
+          <span class="tuner__value">0</span>
+        </label>
+        <label class="tuner__row">
+          <span class="tuner__name">wind</span>
+          <input type="range" name="wind" min="0" max="1" step="0.01" value="0" />
+          <span class="tuner__value">0.00</span>
+        </label>
+        <label class="tuner__check">
+          <input type="checkbox" name="sound.enabled" checked />
+          sound
+        </label>
+        <label class="tuner__row">
+          <span class="tuner__name">volume</span>
+          <input type="range" name="sound.volume" min="0" max="1" step="0.01" value="0.46" />
+          <span class="tuner__value">0.46</span>
+        </label>
+      </form>
+    </aside>
+
     <script type="module" src="./gate.js"></script>
   </body>
 </html>

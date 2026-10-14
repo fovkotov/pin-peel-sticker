@@ -10,21 +10,44 @@ const MARK = 18;
 const LABEL_GAP = 7;
 const LABEL = "Яндекс Пин";
 
+const INTERACTION_DEFAULTS = {
+  peel: {
+    radius: 0.15,
+    stiffness: 0.26,
+    grabWidth: 56,
+    maxAngle: 3.35,
+    detachThreshold: 0.54,
+    residue: false,
+    surfaceShadow: false,
+    release: "snap",
+  },
+  tilt: 0,
+  wind: 0,
+  sound: { enabled: true, volume: 0.46 },
+};
+
 const target = document.querySelector("#sticker-target");
 const reveal = document.querySelector("#sticker-reveal");
 const stage = document.querySelector("#sticker-stage");
 const hit = document.querySelector("#sticker-hit");
 const slot = document.querySelector("#sticker-slot");
 const sheet = document.querySelector("#index-sheet");
+const tuner = document.querySelector("#sticker-tuner");
+const tunerForm = document.querySelector("#tuner-form");
 
 let stickerW = 351;
 let stageW = stickerW + PAD * 2;
 let stageH = STICKER_H + PAD * 2;
+let bakedW = stickerW;
+let bakedStageW = stageW;
+let bakedStageH = stageH;
 let sticker;
 let teasing = true;
 let teaseTimer = 0;
 const meshOffset = { x: 0, y: 0 };
 let layoutBound = false;
+let layoutRaf = 0;
+let layoutNeedsResize = false;
 
 function roundRect(ctx, x, y, w, h, r) {
   const radius = Math.min(r, w / 2, h / 2);
@@ -149,48 +172,70 @@ function disableHintOverlays(engine) {
   engine.setBackgroundRemovalEffect?.(false);
 }
 
-function enableFreePeelFromCircle(engine) {
-  const hitR = CIRCLE_R + 1;
-
-  engine.hitEdge = (local) => {
-    const u0 = (PAD + CIRCLE_CX) / stageW;
-    const cssV0 = (PAD + CIRCLE_CY) / stageH;
-    const ru = hitR / stageW;
-    const rv = hitR / stageH;
-    const u = local.x / engine.meshWidth + 0.5;
-    const v = local.y / engine.meshHeight + 0.5;
-    const du = (u - u0) / ru;
-    const dv = (1 - v - cssV0) / rv;
-    if (du * du + dv * dv > 1) return null;
-
-    const grab = local.clone();
-    const inward = engine.grabDirection.clone();
-    const mx = local.x - (u0 - 0.5) * engine.meshWidth;
-    const my = local.y - (0.5 - cssV0) * engine.meshHeight;
-    if (mx * mx + my * my < 1e-8) inward.set(1, 0);
-    else inward.set(mx, my).normalize();
-    return { local: grab, inward };
+function circleUV() {
+  return {
+    u0: (PAD + CIRCLE_CX) / bakedStageW,
+    v0: (PAD + CIRCLE_CY) / bakedStageH,
+    ru: (CIRCLE_R + 2) / bakedStageW,
+    rv: (CIRCLE_R + 2) / bakedStageH,
   };
 }
 
+function circleLocalPoint(engine) {
+  const { u0, v0 } = circleUV();
+  const point = engine.grabOrigin.clone();
+  point.set((u0 - 0.5) * engine.meshWidth, (0.5 - v0) * engine.meshHeight);
+  return point;
+}
+
+function rightInward(engine) {
+  const inward = engine.grabDirection.clone();
+  inward.set(1, 0);
+  return inward;
+}
+
+function hitCircleInterior(engine, local) {
+  const { u0, v0, ru, rv } = circleUV();
+  const u = local.x / engine.meshWidth + 0.5;
+  const vCss = 0.5 - local.y / engine.meshHeight;
+  const du = (u - u0) / ru;
+  const dv = (vCss - v0) / rv;
+  if (du * du + dv * dv > 1) return null;
+  return { local: local.clone(), inward: rightInward(engine) };
+}
+
+function forceCircleGrab(engine) {
+  return { local: circleLocalPoint(engine), inward: rightInward(engine) };
+}
+
+function enableFreePeelFromCircle(engine) {
+  engine.hitEdge = (local) => hitCircleInterior(engine, local);
+}
+
 function measureSlot() {
-  stickerW = Math.round(slot.getBoundingClientRect().width) || 351;
+  stickerW = Math.round(slot.getBoundingClientRect().width) || bakedW || 351;
   stageW = stickerW + PAD * 2;
   stageH = STICKER_H + PAD * 2;
+}
+
+function rememberBakeSize() {
+  bakedW = stickerW;
+  bakedStageW = stageW;
+  bakedStageH = stageH;
 }
 
 function computeMeshOffset(engine) {
   const canvas = engine.renderer.domElement;
   const canvasRect = canvas.getBoundingClientRect();
   const slotRect = slot.getBoundingClientRect();
-  const height = canvasRect.height || 1;
-  const worldPerPx = engine.viewHeight / height;
+  const worldPerPxX = engine.viewWidth / Math.max(canvasRect.width, 1);
+  const worldPerPxY = engine.viewHeight / Math.max(canvasRect.height, 1);
   const slotCx = slotRect.left + slotRect.width / 2;
   const slotCy = slotRect.top + slotRect.height / 2;
   const canvasCx = canvasRect.left + canvasRect.width / 2;
   const canvasCy = canvasRect.top + canvasRect.height / 2;
-  meshOffset.x = (slotCx - canvasCx) * worldPerPx;
-  meshOffset.y = (canvasCy - slotCy) * worldPerPx;
+  meshOffset.x = (slotCx - canvasCx) * worldPerPxX;
+  meshOffset.y = (canvasCy - slotCy) * worldPerPxY;
 }
 
 function applyMeshOffset(engine) {
@@ -208,20 +253,61 @@ function alignMeshToSlot(engine, force = false) {
 function positionHit() {
   if (!hit) return;
   const slotRect = slot.getBoundingClientRect();
-  const size = (CIRCLE_R + 8) * 2;
+  const stageRect = stage.getBoundingClientRect();
+  const sx = slotRect.width / Math.max(bakedW, 1);
+  const sy = slotRect.height / STICKER_H;
+  const cx = slotRect.left + CIRCLE_CX * sx;
+  const cy = slotRect.top + CIRCLE_CY * sy;
+  const radius = CIRCLE_R * Math.min(sx, sy);
+  const size = (radius + 2) * 2;
   hit.style.width = `${size}px`;
   hit.style.height = `${size}px`;
-  hit.style.left = `${slotRect.left + CIRCLE_CX - size / 2}px`;
-  hit.style.top = `${slotRect.top + CIRCLE_CY - size / 2}px`;
+  hit.style.left = `${cx - size / 2 - stageRect.left}px`;
+  hit.style.top = `${cy - size / 2 - stageRect.top}px`;
 }
 
-function syncLayout() {
+function syncLayout({ resize = true } = {}) {
   if (!sticker?.renderer) return;
-  measureSlot();
-  sticker.setOptions({ display: { width: stageW, height: stageH } });
-  sticker.resize();
+  if (resize) {
+    measureSlot();
+    sticker.setOptions({ display: { width: stageW, height: stageH } });
+    sticker.resize();
+  }
   alignMeshToSlot(sticker.renderer);
   positionHit();
+  sticker.renderer.requestRender();
+}
+
+function scheduleLayoutSync(options) {
+  if (options?.resize) layoutNeedsResize = true;
+  if (layoutRaf) return;
+  layoutRaf = requestAnimationFrame(() => {
+    layoutRaf = 0;
+    const resize = layoutNeedsResize;
+    layoutNeedsResize = false;
+    syncLayout({ resize });
+  });
+}
+
+function bindLayoutWatchers() {
+  if (layoutBound) return;
+  layoutBound = true;
+
+  const fullSync = () => scheduleLayoutSync({ resize: true });
+  const alignOnly = () => scheduleLayoutSync({ resize: false });
+
+  window.addEventListener("resize", fullSync);
+  window.addEventListener("orientationchange", fullSync);
+  window.visualViewport?.addEventListener("resize", fullSync);
+  window.visualViewport?.addEventListener("scroll", alignOnly);
+
+  const sidebar = document.querySelector(".sidebar");
+  sidebar?.addEventListener("scroll", alignOnly, { passive: true });
+  document.querySelector(".history")?.addEventListener("scroll", alignOnly, { passive: true });
+
+  new ResizeObserver(fullSync).observe(slot);
+
+  requestAnimationFrame(fullSync);
 }
 
 function bindFullscreenMesh(engine) {
@@ -257,9 +343,20 @@ function bindFullscreenMesh(engine) {
   engine.startEntranceAnimation = () => {
     engine.reset();
   };
+  engine.entranceActive = false;
+  engine.clearEntrancePose?.();
+
+  const originalResize = engine.resize.bind(engine);
+  engine.resize = () => {
+    originalResize();
+    alignMeshToSlot(engine);
+    positionHit();
+  };
 
   const canvas = engine.renderer.domElement;
   canvas.style.pointerEvents = "none";
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
   canvas.setPointerCapture = (id) => {
     try {
       hit.setPointerCapture(id);
@@ -280,7 +377,13 @@ function bindFullscreenMesh(engine) {
     if (stage.classList.contains("is-detached")) return;
     event.preventDefault();
     cancelTease();
-    engine.onPointerDown(event);
+    const patched = engine.hitEdge;
+    engine.hitEdge = (local) => patched.call(engine, local) || forceCircleGrab(engine);
+    try {
+      engine.onPointerDown(event);
+    } finally {
+      engine.hitEdge = patched;
+    }
   });
   hit.addEventListener("pointermove", (event) => {
     engine.onPointerMove(event);
@@ -322,8 +425,129 @@ function resetSticker() {
   positionHit();
 }
 
+function isTypingTarget(el) {
+  if (!el || el === document.body) return false;
+  if (el.isContentEditable) return true;
+  const tag = el.tagName;
+  if (tag === "TEXTAREA") return true;
+  if (tag !== "INPUT") return false;
+  const type = (el.type || "text").toLowerCase();
+  return (
+    type === "text" ||
+    type === "password" ||
+    type === "search" ||
+    type === "email" ||
+    type === "url" ||
+    type === "tel" ||
+    type === "number"
+  );
+}
+
+function formatTunerValue(name, value) {
+  const n = Number(value);
+  if (name === "peel.grabWidth") return String(Math.round(n));
+  if (name === "tilt") return Number.isInteger(n) ? String(n) : n.toFixed(1);
+  return n.toFixed(2);
+}
+
+function syncTunerLabels() {
+  tunerForm?.querySelectorAll(".tuner__row").forEach((row) => {
+    const input = row.querySelector("input[type='range']");
+    const label = row.querySelector(".tuner__value");
+    if (!input || !label) return;
+    label.textContent = formatTunerValue(input.name, input.value);
+  });
+}
+
+function readTunerOptions() {
+  const data = new FormData(tunerForm);
+  const checked = (name) => Boolean(tunerForm?.elements.namedItem(name)?.checked);
+  return {
+    peel: {
+      radius: Number(data.get("peel.radius")),
+      stiffness: Number(data.get("peel.stiffness")),
+      grabWidth: Number(data.get("peel.grabWidth")),
+      maxAngle: Number(data.get("peel.maxAngle")),
+      detachThreshold: Number(data.get("peel.detachThreshold")),
+      residue: checked("peel.residue"),
+      surfaceShadow: checked("peel.surfaceShadow"),
+      release: String(data.get("peel.release") || "snap"),
+    },
+    tilt: Number(data.get("tilt")),
+    wind: Number(data.get("wind")),
+    sound: {
+      enabled: checked("sound.enabled"),
+      volume: Number(data.get("sound.volume")),
+    },
+  };
+}
+
+function fillTuner(options) {
+  if (!tunerForm) return;
+  const set = (name, value) => {
+    const field = tunerForm.elements.namedItem(name);
+    if (!field) return;
+    if (field.type === "checkbox") field.checked = Boolean(value);
+    else field.value = String(value);
+  };
+  set("peel.radius", options.peel.radius);
+  set("peel.stiffness", options.peel.stiffness);
+  set("peel.grabWidth", options.peel.grabWidth);
+  set("peel.maxAngle", options.peel.maxAngle);
+  set("peel.detachThreshold", options.peel.detachThreshold);
+  set("peel.release", options.peel.release);
+  set("peel.residue", options.peel.residue);
+  set("peel.surfaceShadow", options.peel.surfaceShadow);
+  set("tilt", options.tilt);
+  set("wind", options.wind);
+  set("sound.enabled", options.sound.enabled);
+  set("sound.volume", options.sound.volume);
+  syncTunerLabels();
+}
+
+function applyTuner() {
+  if (!sticker) return;
+  sticker.setOptions(readTunerOptions());
+}
+
+function setTunerOpen(open) {
+  if (!tuner) return;
+  tuner.hidden = !open;
+  tuner.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function toggleTuner() {
+  setTunerOpen(Boolean(tuner?.hidden));
+}
+
+function bindTuner() {
+  if (!tuner || !tunerForm || tuner.dataset.bound) return;
+  tuner.dataset.bound = "1";
+  fillTuner(INTERACTION_DEFAULTS);
+  tunerForm.addEventListener("submit", (event) => event.preventDefault());
+  tunerForm.addEventListener("input", () => {
+    syncTunerLabels();
+    applyTuner();
+  });
+  tunerForm.addEventListener("change", applyTuner);
+  document.querySelector("#tuner-reset")?.addEventListener("click", () => {
+    fillTuner(INTERACTION_DEFAULTS);
+    applyTuner();
+  });
+  window.addEventListener("keydown", (event) => {
+    if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+    const isG = event.code === "KeyG" || event.key === "g" || event.key === "G";
+    if (!isG) return;
+    if (isTypingTarget(event.target)) return;
+    if (document.querySelector("#gate")) return;
+    event.preventDefault();
+    toggleTuner();
+  });
+}
+
 async function start() {
   measureSlot();
+  rememberBakeSize();
 
   const src = await makeStickerDataUrl();
 
@@ -350,21 +574,12 @@ async function start() {
       ambient: 0.42,
       softness: 0.55,
     },
-    peel: {
-      radius: 0.48,
-      stiffness: 0.7,
-      grabWidth: 56,
-      maxAngle: 3.35,
-      detachThreshold: 0.66,
-      residue: false,
-      surfaceShadow: false,
-      release: "snap",
-    },
+    peel: { ...INTERACTION_DEFAULTS.peel },
     back: { color: "#c9c9ce", gloss: 0.88, roughness: 0.16 },
     material: { type: "original", intensity: 0.7, scale: 1 },
-    sound: { enabled: true, volume: 0.46 },
-    tilt: 0,
-    wind: 0,
+    sound: { ...INTERACTION_DEFAULTS.sound },
+    tilt: INTERACTION_DEFAULTS.tilt,
+    wind: INTERACTION_DEFAULTS.wind,
     quality: "high",
   });
 
@@ -372,6 +587,8 @@ async function start() {
   disableHintOverlays(sticker.renderer);
   sticker.setBackgroundRemovalEffect?.(false);
   bindFullscreenMesh(sticker.renderer);
+  sticker.renderer.entranceActive = false;
+  sticker.renderer.reset();
   alignMeshToSlot(sticker.renderer, true);
   positionHit();
   sticker.renderer.requestRender();
@@ -405,13 +622,10 @@ async function start() {
     resetSticker();
   });
 
-  if (!layoutBound) {
-    layoutBound = true;
-    window.addEventListener("resize", syncLayout);
-    window.visualViewport?.addEventListener("resize", syncLayout);
-  }
+  bindLayoutWatchers();
 
   playTease();
 }
 
+bindTuner();
 start().catch(console.error);

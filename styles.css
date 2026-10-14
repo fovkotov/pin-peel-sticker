@@ -249,8 +249,8 @@ body.is-open .app {
 .sticker-stage {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100dvh;
+  width: 100%;
+  height: 100%;
   z-index: 5;
   pointer-events: none;
   touch-action: none;
@@ -271,6 +271,9 @@ body:not(.is-open) .sticker-stage {
 }
 
 #sticker-target canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
   outline: none;
   box-shadow: none;
   touch-action: none;
@@ -281,7 +284,13 @@ body:not(.is-open) .sticker-stage {
   position: absolute;
   width: 48px;
   height: 48px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
+  appearance: none;
+  -webkit-appearance: none;
   pointer-events: auto;
   cursor: grab;
   touch-action: none;
@@ -500,4 +509,138 @@ body:not(.is-open) .sticker-stage {
     color: var(--text);
     word-break: break-all;
   }
+}
+
+.tuner {
+  position: fixed;
+  top: 270px;
+  right: 12px;
+  z-index: 16;
+  width: min(276px, calc(100vw - 24px));
+  max-height: calc(100dvh - 282px);
+  overflow: auto;
+  pointer-events: auto;
+  color: #f4f1fa;
+  background: rgba(18, 16, 24, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 10px 12px 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.tuner[hidden] {
+  display: none;
+  pointer-events: none;
+}
+
+@media (max-height: 600px) {
+  .tuner {
+    top: 12px;
+    max-height: calc(100svh - 24px);
+  }
+}
+
+.tuner__form {
+  display: grid;
+  gap: 6px;
+}
+
+.tuner__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tuner__head strong {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.12px;
+}
+
+.tuner__hint {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08px;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+}
+
+.tuner__reset {
+  margin-left: auto;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.tuner__section {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.tuner__row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 8px;
+}
+
+.tuner__row--field {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.tuner__name {
+  font-size: 11px;
+  letter-spacing: 0.08px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.tuner__value {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.tuner__row input[type="range"] {
+  width: 100%;
+  accent-color: var(--pin);
+}
+
+.tuner__row select {
+  width: 100%;
+  height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 0 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font: inherit;
+  font-size: 11px;
+}
+
+.tuner__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  font-size: 11px;
+  letter-spacing: 0.08px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.tuner__check input {
+  accent-color: var(--pin);
 }
