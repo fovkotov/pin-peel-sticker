@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+    <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet" />
+    <title>Яндекс Пин</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="gate" id="gate">
+      <form class="gate__form" id="gate-form" autocomplete="off">
+        <label class="gate__label" for="gate-password">Пароль</label>
+        <input
+          class="gate__input"
+          id="gate-password"
+          name="password"
+          type="password"
+          inputmode="text"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          required
+        />
+        <button class="gate__submit" type="submit">Войти</button>
+        <p class="gate__error" id="gate-error" hidden>Неверный пароль</p>
+      </form>
+    </div>
+    <div class="app">
+      <header class="nav">
+        <span class="nav__spacer"></span>
+        <button class="icon-btn" type="button" aria-label="Закрыть">
+          <img src="./assets/icon-close.svg" width="15" height="15" alt="" />
+        </button>
+      </header>
+
+      <main class="sidebar">
+        <div class="menu">
+          <button class="row" type="button">
+            <span class="row__icon">
+              <img src="./assets/icon-chat.svg" width="21" height="21" alt="" />
+            </span>
+            <span class="row__label">Новый чат</span>
+          </button>
+          <button class="row" type="button">
+            <span class="row__icon">
+              <img src="./assets/icon-memory.svg" width="20" height="20" alt="" />
+            </span>
+            <span class="row__label">Моя память</span>
+          </button>
+          <button class="row" type="button">
+            <span class="row__icon">
+              <img src="./assets/icon-prompthub.svg" width="17" height="20" alt="" />
+            </span>
+            <span class="row__label">Промптхаб</span>
+            <span class="row__external" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M5 3.25h7.75V11M12.75 3.25 3.5 12.5"
+                  stroke="rgba(0,0,0,.9)"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+          </button>
+        </div>
+
+        <section class="sticker-slot" id="sticker-slot">
+          <div class="sticker-reveal" id="sticker-reveal">
+            <span>Запоминает за тебя</span>
+          </div>
+          <div class="sticker-stage" id="sticker-stage">
+            <div id="sticker-target"></div>
+          </div>
+        </section>
+
+        <section class="history">
+          <h2>Сегодня</h2>
+          <button class="row row--plain" type="button">
+            Рецепт настоящих осетинских пироговака уалибах
+          </button>
+          <button class="row row--plain" type="button">
+            Свободу слова не задушить, пусть даже
+          </button>
+          <button class="row row--plain" type="button">
+            Убеждённость некоторых оппонентов позволила
+          </button>
+
+          <h2>Последние 7 дней</h2>
+          <button class="row row--plain" type="button">Структура солнечной системы</button>
+          <button class="row row--plain" type="button">Тяжёлое машиностроение — это вам</button>
+          <button class="row row--plain" type="button">Структура солнечной системы</button>
+          <button class="row row--plain" type="button">Добрая половина выводов процветает</button>
+        </section>
+      </main>
+
+      <footer class="profile">
+        <div class="profile__bar">
+          <div class="profile__user">
+            <div class="avatar">
+              <img src="./assets/avatar.png" width="27" height="27" alt="" />
+            </div>
+            <div class="profile__text">
+              <p class="profile__name">Дмитрий Б.</p>
+              <p class="profile__sub">Алиса Плюс активна</p>
+            </div>
+          </div>
+          <button class="icon-btn" type="button" aria-label="Настройки">
+            <img src="./assets/icon-settings.svg" width="20" height="20" alt="" />
+          </button>
+        </div>
+        <p class="disclaimer">
+          Алиса старается, но может ошибаться — проверяйте важное.
+          <span>Подробнее</span>
+        </p>
+      </footer>
+    </div>
+
+    <script type="module" src="./gate.js"></script>
+  </body>
+</html>
